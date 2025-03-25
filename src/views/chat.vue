@@ -1,8 +1,6 @@
 <template>
   <div class="chat-container">
 
-
-
     <div v-if="showEditModal" class="modal-overlay">
       <div class="modal-content">
         <h2>更改用戶信息</h2>
@@ -41,7 +39,7 @@
 
     <div class="chat-header">
       <button class="logo-button" @click="goToAESC">
-        <img src="@/AESC logo.png" alt="AESC Logo" class="aesc-logo">
+        <span class="logo-text">Asian Energy Studies Centre</span>
       </button>
       <div class="header-room-title">{{ currentRoomName }}</div>
       <button class="edit-button" @click="handleEdit">
@@ -105,7 +103,6 @@ const api = axios.create({
   }
 });
 
-// 添加錯誤攔截器
 api.interceptors.response.use(
   response => response,
   error => {
@@ -185,7 +182,6 @@ export default {
         const response = await api.get('/api/chat/rooms')
         console.log('正在獲取聊天室列表...')
         if (response.data.success) {
-          // 為每個房間添加預設的lastMessage
           this.rooms = response.data.data.map(room => ({
             ...room,
             lastMessage: {
@@ -284,7 +280,8 @@ export default {
   color: white;
   padding: 0 1.5rem;
   display: grid;
-  grid-template-columns: 30% 70%; 
+  /* grid-template-columns: 30% 70%;  */
+  grid-template-columns: auto 1fr;
   align-items: center;
   height: 60px;
   position: relative;
@@ -300,7 +297,7 @@ export default {
 .header-room-title {
   font-size: 1.2rem;
   margin: 0;
-  padding-left: 20px;
+  padding-left: 130px;
 }
 
 .chat-sidebar {
@@ -526,14 +523,6 @@ export default {
 }
 
 
-
-
-
-
-
-
-
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -608,16 +597,15 @@ export default {
 
 .logo-button {
   background: none;
-  padding: 0;
+  padding: 0 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   border-radius: 5px;
-  width: 150px;
   height: 50px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-left: 250px;
+  margin-left: 20px;
+  border: none;
 }
 
 .logo-button:hover {
@@ -628,6 +616,18 @@ export default {
   height: 40px;
   width: auto;
   object-fit: contain;
+}
+
+.logo-text {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.logo-button:hover .logo-text {
+  text-shadow: 0 0 10px #37d5c3;
 }
 
 </style>
