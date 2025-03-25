@@ -21,8 +21,11 @@
           <input v-model="editInfo.NICK_NAME" type="text">
         </div>
         <div class="form-group">
-          <label>狀態</label>
-          <input v-model="editInfo.STATUS" type="text">
+        <label>狀態</label>
+          <select v-model="editInfo.STATUS">
+            <option value="訂閱中">訂閱中</option>
+            <option value="取消訂閱">未訂閱</option>
+          </select>
         </div>
         <div class="form-group">
           <label>住址</label>
@@ -562,6 +565,14 @@ export default {
   font-size: 14px;
 }
 
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
 .modal-buttons {
   display: flex;
   justify-content: flex-end;
@@ -629,5 +640,7 @@ export default {
 .logo-button:hover .logo-text {
   text-shadow: 0 0 10px #37d5c3;
 }
+
+
 
 </style>
