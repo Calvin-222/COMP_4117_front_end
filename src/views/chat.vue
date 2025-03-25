@@ -8,31 +8,27 @@
         <h2>更改用戶信息</h2>
         <div class="form-group">
           <label>Case Code</label>
-          <input v-model="editInfo.name" type="text" placeholder="請輸入姓名">
+          <input v-model="editInfo.CASE_CODE" type="text">
         </div>
         <div class="form-group">
-          <label>姓名</label>
-          <input v-model="editInfo.name" type="text" placeholder="請輸入姓名">
+          <label>名字</label>
+          <input v-model="editInfo.FIRST_NAME" type="text">
         </div>
         <div class="form-group">
-          <label>電話號碼 1</label>
-          <input v-model="editInfo.phone" type="text" placeholder="請輸入電話號碼">
+          <label>姓氏</label>
+          <input v-model="editInfo.LAST_NAME" type="text">
         </div>
         <div class="form-group">
-          <label>電話號碼 2</label>
-          <input v-model="editInfo.phone" type="text" placeholder="請輸入電話號碼">
+          <label>暱稱</label>
+          <input v-model="editInfo.NICK_NAME" type="text">
         </div>
         <div class="form-group">
-          <label>電話號碼 3</label>
-          <input v-model="editInfo.phone" type="text" placeholder="請輸入電話號碼">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <input v-model="editInfo.phone" type="text" placeholder="請輸入電話號碼">
+          <label>狀態</label>
+          <input v-model="editInfo.STATUS" type="text">
         </div>
         <div class="form-group">
           <label>住址</label>
-          <input v-model="editInfo.address" type="text" placeholder="請輸入住址">
+          <input v-model="editInfo.ADDRESS" type="text">
         </div>
         <div class="modal-buttons">
           <button @click="saveEdit" class="save-btn">保存修改</button>
@@ -102,12 +98,24 @@ import { reactive } from 'vue'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  timeout: 5000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
-})
+});
+
+// 添加錯誤攔截器
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API 錯誤:', error.message);
+    if (error.code === 'ECONNABORTED') {
+      console.error('請求超時，請檢查後端服務是否正常運行');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default {
   name: 'chat-component',
@@ -121,17 +129,30 @@ export default {
 
       showEditModal: false,
       editInfo: {
-        name: '',
-        phone: '',
-        address: ''
+        USER_ID: '',
+        PHONE_NO: '',
+        CASE_CODE: '',
+        USER_NAME: '',
+        FIRST_NAME: '',
+        LAST_NAME: '',
+        NICK_NAME: '',
+        TITLE: '',
+        ADDRESS: '',
+        ROLE: '',
+        STATUS: ''
       }
     }
   },
   computed: {
     filteredRooms() {
-      return this.rooms.filter(room => 
-        room.roomName.toLowerCase().includes(this.searchQuery.toLowerCase())
-      )
+      return this.rooms.filter(room => {
+        const searchLower = this.searchQuery.toLowerCase();
+        return (
+          room.roomName.toLowerCase().includes(searchLower) ||
+          room.roomId.toLowerCase().includes(searchLower) ||
+          (room.userInfo?.caseCode || '').toLowerCase().includes(searchLower)
+        );
+      });
     },
     currentMessages() {
       return this.messages[this.currentRoom] || []
@@ -164,13 +185,20 @@ export default {
         const response = await api.get('/api/chat/rooms')
         console.log('正在獲取聊天室列表...')
         if (response.data.success) {
-          this.rooms = response.data.data
+          // 為每個房間添加預設的lastMessage
+          this.rooms = response.data.data.map(room => ({
+            ...room,
+            lastMessage: {
+              content: '暫無訊息',
+              timestamp: ''
+            }
+          }));
           if (this.rooms.length > 0 && !this.currentRoom) {
             await this.selectRoom(this.rooms[0].roomId)
           }
         }
       } catch (error) {
-        console.error('獲取房間列表失敗:', error.response || error)
+        console.error('獲取房間列表失敗:', error.response?.data?.message || error.message)
       }
     },
 
@@ -179,10 +207,20 @@ export default {
         const response = await api.get(`/api/chat/rooms/${roomId}/messages`)
         console.log('正在獲取訊息...')
         if (response.data.success) {
-          this.messages[roomId] = response.data.data
+          const { userInfo, messages } = response.data.data;
+          this.messages[roomId] = messages || [];
+          
+          // 更新房間信息
+          const roomIndex = this.rooms.findIndex(r => r.roomId === roomId);
+          if (roomIndex !== -1) {
+            this.rooms[roomIndex] = {
+              ...this.rooms[roomIndex],
+              ...userInfo
+            };
+          }
         }
       } catch (error) {
-        console.error('獲取訊息失敗:', error)
+        console.error('獲取訊息失敗:', error.response?.data?.message || error.message)
       }
     },
     handleDelete() {
@@ -191,34 +229,28 @@ export default {
 
       }
     },
-    // handleEdit() {
-    //   this.$router.push(`/edit/${this.currentRoom}`)
-    // }
-
-    handleEdit() {
-      this.showEditModal = true
-      this.fetchUserInfo()
-    },
-    async fetchUserInfo() {
+    async handleEdit() {
       try {
-        const response = await api.get(`/api/chat/rooms/${this.currentRoom}/info`)
+        const response = await api.get(`/api/users/${this.currentRoom}`);
         if (response.data.success) {
-          this.editInfo = response.data.data
+          this.editInfo = response.data.data;
+          this.showEditModal = true;
         }
       } catch (error) {
-        console.error('獲取用戶信息失敗:', error)
+        console.error('獲取用戶資料失敗:', error);
       }
     },
+
     async saveEdit() {
       try {
-        const response = await api.put(`/api/chat/rooms/${this.currentRoom}/info`, this.editInfo)
+        const response = await api.put(`/api/users/${this.currentRoom}`, this.editInfo);
         if (response.data.success) {
-          this.showEditModal = false
-          // 可以添加成功提示
-          alert('信息更新成功！')
+          this.showEditModal = false;
+          await this.fetchRooms(); // 重新載入房間列表
+          await this.selectRoom(this.currentRoom); // 重新載入當前房間
         }
       } catch (error) {
-        console.error('更新用戶信息失敗:', error)
+        console.error('更新用戶資料失敗:', error);
       }
     },
     goToAESC() {
