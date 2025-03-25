@@ -100,7 +100,6 @@
 import axios from 'axios'
 import { reactive } from 'vue'
 
-// 創建 axios 實例並設定基本配置
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 5000,
@@ -118,7 +117,7 @@ export default {
       currentRoom: null,
       searchQuery: '',
       rooms: [],
-      messages: reactive({}),  // 使用 reactive 確保響應式
+      messages: reactive({}),
 
       showEditModal: false,
       editInfo: {
@@ -145,7 +144,7 @@ export default {
   methods: {
     async selectRoom(roomId) {
       this.currentRoom = roomId
-      await this.fetchMessages(roomId)  // 確保獲取到訊息
+      await this.fetchMessages(roomId)
       this.$nextTick(() => {
         this.scrollToBottom()
       })
@@ -162,7 +161,7 @@ export default {
 
     async fetchRooms() {
       try {
-        const response = await api.get('/api/chat/rooms')  // 修改 API 路徑
+        const response = await api.get('/api/chat/rooms')
         console.log('正在獲取聊天室列表...')
         if (response.data.success) {
           this.rooms = response.data.data
@@ -177,7 +176,7 @@ export default {
 
     async fetchMessages(roomId) {
       try {
-        const response = await api.get(`/api/chat/rooms/${roomId}/messages`)  // 修改 API 路徑
+        const response = await api.get(`/api/chat/rooms/${roomId}/messages`)
         console.log('正在獲取訊息...')
         if (response.data.success) {
           this.messages[roomId] = response.data.data
@@ -198,7 +197,6 @@ export default {
 
     handleEdit() {
       this.showEditModal = true
-      // 獲取當前用戶信息
       this.fetchUserInfo()
     },
     async fetchUserInfo() {
@@ -264,13 +262,13 @@ export default {
   font-size: 1.2rem;
   font-weight: bold;
   margin: 5;
-  /* padding-left: 0px; */
+
 }
 
 .header-room-title {
   font-size: 1.2rem;
   margin: 0;
-  padding-left: 20px;  /* 與聊天內容對齊 */
+  padding-left: 20px;
 }
 
 .chat-sidebar {
@@ -282,7 +280,7 @@ export default {
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  min-width: 200px;  /* 設定最小寬度，避免太窄 */
+  min-width: 200px;
 }
 
 .search-box {
@@ -376,21 +374,21 @@ export default {
   grid-column: 2;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);  /* 修改這裡 */
-  overflow: hidden;  /* 添加這行 */
+  height: calc(100vh - 60px);
+  overflow: hidden;
 }
 
 .messages-container {
   flex: 1;
-  overflow-y: auto;  /* 保持這個屬性 */
+  overflow-y: auto;
   padding: 20px 20px 80px 20px;
   background-image: url('@/background.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  height: calc(100vh - 60px);  /* 修改這裡，減去header高度 */
-  max-height: calc(100vh - 60px);  /* 添加最大高度限制 */
-  position: relative;  /* 添加這行 */
+  height: calc(100vh - 60px);
+  max-height: calc(100vh - 60px);
+  position: relative;
 }
 
 .message {
@@ -398,10 +396,10 @@ export default {
   max-width: 70%;
   padding: 10px;
   border-radius: 10px;
-  width: fit-content;  /* 讓寬度適應內容 */
-  min-width: 100px;   /* 設定最小寬度 */
-  word-wrap: break-word;  /* 確保長文字會換行 */
-  white-space: pre-wrap;  /* 保留換行和空格 */
+  width: fit-content;
+  min-width: 100px;
+  word-wrap: break-word; 
+  white-space: pre-wrap; 
 }
 
 .message.sent {
@@ -412,7 +410,7 @@ export default {
 
 .message.received {
   margin-right: auto;
-  margin-left: 10px;  /* 添加左側間距 */
+  margin-left: 10px; 
   background-color: white;
 }
 
@@ -582,11 +580,11 @@ export default {
   cursor: pointer;
   transition: all 0.3s ease;
   border-radius: 5px;
-  width: 150px;  /* 設定按鈕寬度 */
-  height: 50px;  /* 設定按鈕高度 */
-  display: flex;  /* 使用 flex 布局讓內容置中 */
-  align-items: center;  /* 垂直置中 */
-  justify-content: center;  /* 水平置中 */
+  width: 150px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 250px;
 }
 
