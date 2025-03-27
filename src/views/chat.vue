@@ -312,7 +312,7 @@ export default {
           USERNAME: userData.Name || '',
           UPDATED_FULL_NAME: userData["updated full name"] || '',
           ADDRESS: userData.Address || '',
-          STATUS: userData.Status || '訂閱中'
+          STATUS: userData.Status || ''
         };
         this.showEditModal = true;
       } catch (error) {
