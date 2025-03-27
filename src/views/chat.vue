@@ -9,7 +9,15 @@
           <input v-model="editInfo.CASE_CODE" type="text">
         </div>
         <div class="form-group">
-          <label>名字</label>
+          <label>電話號碼</label>
+          <input v-model="editInfo.PHONE_NO" type="tel">
+        </div>
+        <div class="form-group">
+          <label>名稱</label>
+          <input v-model="editInfo.USERNAME" type="text">
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
           <input v-model="editInfo.FIRST_NAME" type="text">
         </div>
         <div class="form-group">
@@ -18,11 +26,12 @@
         </div>
         <div class="form-group">
           <label>暱稱</label>
-          <input v-model="editInfo.NICK_NAME" type="text">
+          <input v-model="editInfo.UPDATED_FULL_NAME" type="text">
         </div>
         <div class="form-group">
         <label>狀態</label>
           <select v-model="editInfo.STATUS">
+            <option value=""></option>
             <option value="訂閱中">訂閱中</option>
             <option value="取消訂閱">未訂閱</option>
           </select>
@@ -76,8 +85,8 @@
     <div class="chat-main">
       <div class="messages-container" ref="messageContainer">
         <div v-for="message in currentMessages" 
-             :key="message._id" 
-             :class="['message', message.senderId === currentUserId ? 'sent' : 'received']">
+          :key="message._id" 
+          :class="['message', message.senderId !== currentUserId ? 'sent' : 'received']">
           <div class="message-content">
             {{ message.content }}
           </div>
@@ -96,6 +105,7 @@
 <script>
 import axios from 'axios'
 import { reactive } from 'vue'
+import '@/assets/styles/chat.css'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
@@ -105,17 +115,6 @@ const api = axios.create({
     'Accept': 'application/json'
   }
 });
-
-api.interceptors.response.use(
-  response => response,
-  error => {
-    console.error('API 錯誤:', error.message);
-    if (error.code === 'ECONNABORTED') {
-      console.error('請求超時，請檢查後端服務是否正常運行');
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default {
   name: 'chat-component',
@@ -129,129 +128,217 @@ export default {
 
       showEditModal: false,
       editInfo: {
-        USER_ID: '',
-        PHONE_NO: '',
-        CASE_CODE: '',
-        USER_NAME: '',
-        FIRST_NAME: '',
-        LAST_NAME: '',
-        NICK_NAME: '',
-        TITLE: '',
-        ADDRESS: '',
-        ROLE: '',
-        STATUS: ''
-      }
+      USER_ID: '',
+      PHONE_NO: '',
+      CASE_CODE: '',
+      FIRST_NAME: '',
+      LAST_NAME: '',
+      USERNAME: '',
+      UPDATED_FULL_NAME: '',
+      TITLE: '',
+      ADDRESS: '',
+      ROLE: '',
+      STATUS: ''
+    }
     }
   },
   computed: {
     filteredRooms() {
+      // search bar is empty
+      if (!this.searchQuery) {
+        return this.rooms;
+      }
+      
+      // i think no need to fix --> fp = FP
+      // const searchLower = this.searchQuery.toLowerCase();
+      const searchQuery = this.searchQuery;
       return this.rooms.filter(room => {
-        const searchLower = this.searchQuery.toLowerCase();
-        return (
-          room.roomName.toLowerCase().includes(searchLower) ||
-          room.roomId.toLowerCase().includes(searchLower) ||
-          (room.userInfo?.caseCode || '').toLowerCase().includes(searchLower)
-        );
+        const phoneNo = room.roomId ? String(room.roomId) : '';
+        const caseCode = room.caseCode ? String(room.caseCode) : '';
+        const userName = room.roomName ? String(room.roomName) : '';
+        
+        return phoneNo.includes(searchQuery) || 
+              caseCode.includes(searchQuery) || 
+              userName.includes(searchQuery);
       });
     },
+
     currentMessages() {
       return this.messages[this.currentRoom] || []
     },
     currentRoomName() {
-      const currentRoom = this.rooms.find(room => room.roomId === this.currentRoom)
-      return currentRoom ? currentRoom.roomName : '聊天室'
+      const currentRoom = this.rooms.find(room => room.roomId === this.currentRoom);
+      return currentRoom ? `${currentRoom.roomName}  ${currentRoom.roomId}` : '聊天室';
     }
   },
   methods: {
+    // load message when clicking the room
     async selectRoom(roomId) {
       this.currentRoom = roomId
       await this.fetchMessages(roomId)
+      
       this.$nextTick(() => {
-        this.scrollToBottom()
+        const container = this.$refs.messageContainer
+        if (container) {
+          container.scrollTop = container.scrollHeight
+        }
       })
-    },
-    scrollToBottom() {
-      const container = this.$refs.messageContainer
-      if (container) {
-        container.scrollTop = container.scrollHeight
-      }
     },
     openWhatsApp() {
       window.open('https://web.whatsapp.com/', '_blank')
     },
 
-    async fetchRooms() {
+    async fetchAllUsers() {
       try {
-        const response = await api.get('/api/chat/rooms')
-        console.log('正在獲取聊天室列表...')
+        const response = await api.get('/api/users');
+        
         if (response.data.success) {
-          this.rooms = response.data.data.map(room => ({
-            ...room,
+          this.rooms = response.data.data
+          .filter(user => user["Phone Number"]) // only users with phone number
+          .map(user => ({
+            roomId: user["Phone Number"],
+            // updated full name > Name >  First NAME & LAST NAME
+            roomName: user["updated full name"] || user.Name || `${user["First NAME"] || ''} ${user["LAST NAME"] || ''}`.trim() || '未命名用戶',
+            caseCode: user["Case Code"] || '',
             lastMessage: {
-              content: '暫無訊息',
+              content: user["Case Code"] || '',
               timestamp: ''
-            }
+            },
+            userInfo: user
           }));
+          
           if (this.rooms.length > 0 && !this.currentRoom) {
-            await this.selectRoom(this.rooms[0].roomId)
+            await this.selectRoom(this.rooms[0].roomId);
+          }
+        } else {
+          console.error('fetchAllUsers error:' + response.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+    async fetchRealChatRooms() {
+      try {
+        const response = await api.get('/api/chat/rooms');
+        if (response.data.success) {
+          const chatRooms = response.data.data;
+          
+          for (let i = 0; i < chatRooms.length; i++) {
+            const chatRoom = chatRooms[i];
+            const roomId = chatRoom.roomId ? String(chatRoom.roomId) : '';
+            const roomIndex = this.rooms.findIndex(function(r) { 
+              return r.roomId === roomId;
+            });
+            
+            if (roomIndex !== -1) {
+              this.rooms[roomIndex].lastMessage = chatRoom.lastMessage || this.rooms[roomIndex].lastMessage;
+              
+              if (chatRoom.userInfo) {
+                this.rooms[roomIndex].userInfo = {
+                  ...this.rooms[roomIndex].userInfo,
+                  ...chatRoom.userInfo
+                };
+              }
+            }
           }
         }
       } catch (error) {
-        console.error('獲取房間列表失敗:', error.response?.data?.message || error.message)
+        console.error(error);
       }
     },
 
     async fetchMessages(roomId) {
       try {
-        const response = await api.get(`/api/chat/rooms/${roomId}/messages`)
-        console.log('正在獲取訊息...')
+        const response = await api.get(`/api/chat/rooms/${roomId}/messages`);
+
         if (response.data.success) {
           const { userInfo, messages } = response.data.data;
           this.messages[roomId] = messages || [];
           
-          // 更新房間信息
-          const roomIndex = this.rooms.findIndex(r => r.roomId === roomId);
-          if (roomIndex !== -1) {
-            this.rooms[roomIndex] = {
-              ...this.rooms[roomIndex],
-              ...userInfo
-            };
+          if (userInfo) {
+            const roomIndex = this.rooms.findIndex(r => r.roomId === roomId);
+            if (roomIndex !== -1) {
+              this.rooms[roomIndex] = {
+                ...this.rooms[roomIndex],
+                caseCode: userInfo["Case Code"] || '',
+                phoneNo: userInfo["Phone Number"] || roomId,
+                userInfo: userInfo
+              };
+            }
           }
+        } else {
+          console.error('fetchMessages： API有問題:', response.data.message);
         }
       } catch (error) {
-        console.error('獲取訊息失敗:', error.response?.data?.message || error.message)
+        console.error('fetchMessages： 獲取訊息失敗:', error);
       }
     },
+    
     handleDelete() {
-      if (confirm('確定要刪除此聊天室嗎？')) {
-        console.log('刪除聊天室:', this.currentRoom)
-
+    // 獲取當前聊天室信息
+      const currentRoom = this.rooms.find(room => room.roomId === this.currentRoom);
+            
+      const confirmMessage = `確定要刪除與 ${currentRoom.roomName} (${currentRoom.roomId}) 的聊天室嗎？`;
+      
+      if (confirm(confirmMessage)) {
+        console.log('刪除聊天室:', this.currentRoom);
+        // 仲未有 Delete の API
+        // const response = await api.delete(`/api/chat/rooms/${this.currentRoom}`);
       }
     },
     async handleEdit() {
-      try {
-        const response = await api.get(`/api/users/${this.currentRoom}`);
-        if (response.data.success) {
-          this.editInfo = response.data.data;
-          this.showEditModal = true;
+      try {        
+        const currentRoomData = this.rooms.find(room => room.roomId === this.currentRoom);
+        
+        let userData = currentRoomData.userInfo || {};
+        try {
+          const response = await api.get(`/api/users/${this.currentRoom}`);
+          if (response.data.success) {
+            userData = response.data.data;
+          } else {
+            console.warn('handleEdit :', response.data.message);
+          }
+        } catch (error) {
+          console.error('handleEdit :', error);
         }
+        
+        this.editInfo = {
+          USER_ID: userData._id || this.currentRoom,
+          PHONE_NO: userData["Phone Number"] || this.currentRoom,
+          CASE_CODE: userData["Case Code"] || '',
+          FIRST_NAME: userData["First NAME"] || '',
+          LAST_NAME: userData["LAST NAME"] || '',
+          USERNAME: userData.Name || '',
+          UPDATED_FULL_NAME: userData["updated full name"] || '',
+          ADDRESS: userData.Address || '',
+          STATUS: userData.Status || '訂閱中'
+        };
+        this.showEditModal = true;
       } catch (error) {
-        console.error('獲取用戶資料失敗:', error);
+        alert('handleEdit : ' + error.message);
       }
     },
 
     async saveEdit() {
       try {
-        const response = await api.put(`/api/users/${this.currentRoom}`, this.editInfo);
+        
+        const phoneNo = this.editInfo.PHONE_NO;
+        const response = await api.put(`/api/users/${phoneNo}`, this.editInfo);
+        
         if (response.data.success) {
           this.showEditModal = false;
-          await this.fetchRooms(); // 重新載入房間列表
-          await this.selectRoom(this.currentRoom); // 重新載入當前房間
+          alert('用戶資料已更新');
+          await this.fetchAllUsers();
+          await this.selectRoom(this.currentRoom);
+        } else {
+          alert('更新失敗: ' + response.data.message);
         }
       } catch (error) {
         console.error('更新用戶資料失敗:', error);
       }
     },
+    
     goToAESC() {
       window.open('https://www.aesc-hkbu.org/about-us', '_blank')
     },
@@ -259,388 +346,9 @@ export default {
   },
 
   async created() {
-    await this.fetchRooms()
+    // 只獲取所有用戶資料，然後獲取真實聊天記錄
+    await this.fetchAllUsers();
+    await this.fetchRealChatRooms();
   }
 }
 </script>
-
-<style scoped>
-.chat-container {
-  display: grid;
-  grid-template-columns: 30% 70%;
-  grid-template-rows: 60px 1fr;
-  height: 100vh;
-  width: 100vw;
-  background-color: #f0f2f5;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-.chat-header {
-  grid-column: 1 / -1;
-  background-color: #075e54;
-  color: white;
-  padding: 0 1.5rem;
-  display: grid;
-  /* grid-template-columns: 30% 70%;  */
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  height: 60px;
-  position: relative;
-}
-
-.header-main-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin: 5;
-
-}
-
-.header-room-title {
-  font-size: 1.2rem;
-  margin: 0;
-  padding-left: 130px;
-}
-
-.chat-sidebar {
-  grid-row: 2;
-  grid-column: 1;
-  background-color: white;
-  border-right: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  min-width: 200px;
-}
-
-.search-box {
-  padding: 10px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-}
-
-.chat-rooms {
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* .room-item {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-} */
-
-.room-item {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  border-radius: 10px;
-  margin: 4px 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.room-item:hover {
-  background-color: #f8f8f8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.room-item.active {
-  background-color: #e8e8e8;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  border-left: 5px solid #128C7E;
-}
-
-.room-avatar {
-  width: 40px;
-  height: 40px;
-  background-color: #128C7E;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  font-weight: bold;
-}
-
-.room-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.room-name {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.last-message {
-  color: #666;
-  font-size: 0.9em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.room-time {
-  color: #666;
-  font-size: 0.8em;
-}
-
-
-.chat-main {
-  grid-row: 2;
-  grid-column: 2;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 60px);
-  overflow: hidden;
-}
-
-.messages-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 20px 80px 20px;
-  background-image: url('@/background.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  height: calc(100vh - 60px);
-  max-height: calc(100vh - 60px);
-  position: relative;
-}
-
-.message {
-  margin: 10px 0;
-  max-width: 70%;
-  padding: 10px;
-  border-radius: 10px;
-  width: fit-content;
-  min-width: 100px;
-  word-wrap: break-word; 
-  white-space: pre-wrap; 
-}
-
-.message.sent {
-  margin-left: auto;
-  margin-right: 10px;
-  background-color: #dcf8c6;
-}
-
-.message.received {
-  margin-right: auto;
-  margin-left: 10px; 
-  background-color: white;
-}
-
-.message-content {
-  margin-bottom: 5px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.message-time {
-  font-size: 0.8em;
-  color: #666;
-  text-align: right;
-}
-
-.floating-whatsapp {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  background-color: #25D366;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 25px;
-  cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.floating-whatsapp:hover {
-  background-color: #128C7E;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-}
-
-.delete-button {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 8px 16px;
-  background-color: #128C7E;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.delete-button:hover {
-  background-color: #ff5252;
-  right: 14px;
-  font-size: 16px;
-}
-
-.edit-button {
-  position: absolute;
-  right: 140px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 8px 16px;
-  background-color: #128C7E;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.edit-button:hover {
-  background-color: #f3c370;
-  right: 135px;
-  font-size: 16px;
-}
-
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 400px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  color: #333;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.save-btn, .cancel-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.save-btn {
-  background-color: #128C7E;
-  color: white;
-}
-
-.save-btn:hover {
-  background-color: #0d6d5d;
-}
-
-.cancel-btn {
-  background-color: #e0e0e0;
-  color: #333;
-}
-
-.cancel-btn:hover {
-  background-color: #d0d0d0;
-}
-
-.logo-button {
-  background: none;
-  padding: 0 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 5px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  margin-left: 20px;
-  border: none;
-}
-
-.logo-button:hover {
-  box-shadow: 0 0 10px #37d5c3;
-}
-
-.aesc-logo {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
-.logo-text {
-  color: white;
-  font-size: 1.2rem;
-  font-weight: bold;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.logo-button:hover .logo-text {
-  text-shadow: 0 0 10px #37d5c3;
-}
-
-
-
-</style>
