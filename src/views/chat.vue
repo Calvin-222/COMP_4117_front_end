@@ -185,7 +185,9 @@ export default {
       })
     },
     openWhatsApp() {
-      window.open('https://web.whatsapp.com/', '_blank')
+      const currentRoom = this.rooms.find(room => room.roomId === this.currentRoom);
+      const phoneNumber = currentRoom ? currentRoom.roomId : '';
+      window.open(`https://wa.me/${phoneNumber}`, '_blank')
     },
 
     async fetchAllUsers() {
@@ -305,7 +307,7 @@ export default {
         
         this.editInfo = {
           USER_ID: userData._id || this.currentRoom,
-          PHONE_NO: userData["Phone Number"] || this.currentRoom,
+          PHONE_NO: userData["Phone Number"] || this.currentRoom || '',
           CASE_CODE: userData["Case Code"] || '',
           FIRST_NAME: userData["First NAME"] || '',
           LAST_NAME: userData["LAST NAME"] || '',
@@ -322,10 +324,8 @@ export default {
 
     async saveEdit() {
       try {
-        
         const phoneNo = this.editInfo.PHONE_NO;
         const response = await api.put(`/api/users/${phoneNo}`, this.editInfo);
-        
         if (response.data.success) {
           this.showEditModal = false;
           alert('用戶資料已更新');
