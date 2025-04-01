@@ -53,6 +53,7 @@
       <div class="header-room-title">{{ currentRoomName }}</div>
       <button class="edit-button" @click="handleEdit">更改信息</button>
       <button class="delete-button" @click="handleDelete">刪除聊天室</button>
+      <button class="pending-button" @click="goToPending">Pending</button>
     </div>
 
     <div class="chat-sidebar">
@@ -482,6 +483,10 @@ export default {
     goToAESC() {
       window.open("https://www.aesc-hkbu.org/about-us", "_blank");
     },
+
+    goToPending() {
+      this.$router.push("/pending");
+    },
   },
 
   async created() {
@@ -495,3 +500,25 @@ export default {
   },
 };
 </script>
+
+<style>
+/* Add styles for the pending button */
+.pending-button {
+  position: absolute;
+  right: 260px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px 16px;
+  background-color: #128c7e;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.pending-button:hover {
+  background-color: #f3c370;
+}
+</style>
