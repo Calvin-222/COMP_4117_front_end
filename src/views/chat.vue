@@ -114,7 +114,6 @@
 import axios from "axios";
 import { reactive } from "vue";
 import "@/assets/styles/chat.css";
-import socketService from "@/services/socketService";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
@@ -186,15 +185,8 @@ export default {
   methods: {
     // load message when clicking the room
     async selectRoom(roomId) {
-      if (this.currentRoom && this.socketConnected) {
-        socketService.leaveRoom(this.currentRoom);
-      }
       this.currentRoom = roomId;
       await this.fetchMessages(roomId);
-
-      if (this.socketConnected) {
-        socketService.joinRoom(roomId);
-      }
 
       this.$nextTick(() => {
         const container = this.$refs.messageContainer;
@@ -210,53 +202,7 @@ export default {
     },
 
     setupSocketConnection() {
-      try {
-        // 連接 Socket.IO
-        // eslint-disable-next-line no-unused-vars
-        const socket = socketService.connect();
-        this.socketConnected = true;
-
-        // 監聽新消息
-        socketService.onNewMessage((data) => {
-          console.log("收到新消息:", data);
-          if (data.roomId === this.currentRoom) {
-            if (!this.messages[this.currentRoom]) {
-              this.messages[this.currentRoom] = [];
-            }
-
-            // 添加新消息
-            this.messages[this.currentRoom].push(data.message);
-
-            // 自動滾動到底部
-            this.$nextTick(() => {
-              const container = this.$refs.messageContainer;
-              if (container) {
-                container.scrollTop = container.scrollHeight;
-              }
-            });
-          }
-        });
-        socketService.onMessageNotification((data) => {
-          console.log("收到消息通知:", data);
-
-          const roomIndex = this.rooms.findIndex((room) => room.roomId === data.roomId);
-          if (roomIndex !== -1) {
-            this.rooms[roomIndex].lastMessage = data.lastMessage;
-
-            const room = this.rooms.splice(roomIndex, 1)[0];
-            this.rooms.unshift(room);
-          } else {
-            this.fetchRealChatRooms();
-          }
-        });
-
-        if (this.currentRoom) {
-          socketService.joinRoom(this.currentRoom);
-        }
-      } catch (error) {
-        console.error("Socket.IO 連接錯誤:", error);
-        this.socketConnected = false;
-      }
+      console.log('實時通訊功能已禁用');
     },
 
     async fetchAllUsers() {
@@ -425,12 +371,6 @@ export default {
           return;
         }
 
-        // const messageData = {
-        //   phoneNo: this.currentRoom,
-        //   sender: "浸會大學 SEE - 西貢/將軍澳社區",
-        //   message: this.newMessage
-        // };
-
         const phoneNo = String(this.currentRoom);
 
         const messageData = {
@@ -463,6 +403,19 @@ export default {
           this.messages[this.currentRoom].push(newMsg);
           this.newMessage = "";
 
+          // 手動更新房間的最後消息
+          const roomIndex = this.rooms.findIndex(room => room.roomId === this.currentRoom);
+          if (roomIndex !== -1) {
+            this.rooms[roomIndex].lastMessage = {
+              content: this.newMessage,
+              timestamp: new Date().toISOString().replace("T", " ").substring(0, 19)
+            };
+
+            // 將當前聊天室移到頂部
+            const room = this.rooms.splice(roomIndex, 1)[0];
+            this.rooms.unshift(room);
+          }
+
           this.$nextTick(() => {
             const container = this.$refs.messageContainer;
             if (container) {
@@ -486,11 +439,9 @@ export default {
   async created() {
     await this.fetchAllUsers();
     await this.fetchRealChatRooms();
-    this.setupSocketConnection();
   },
 
   beforeUnmount() {
-    socketService.disconnect();
   },
 };
 </script>
