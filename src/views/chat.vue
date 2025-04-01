@@ -100,7 +100,6 @@
           type="text"
           v-model="newMessage"
           placeholder="輸入訊息..."
-          @keyup.enter="sendMessage"
           class="message-input"
         />
         <button @click="sendMessage" class="send-button">發送</button>
