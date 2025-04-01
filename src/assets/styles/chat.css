@@ -73,25 +73,25 @@
   border-radius: 10px;
   margin: 4px 8px;
   transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .room-item:hover {
   background-color: #f8f8f8;
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .room-item.active {
   background-color: #e8e8e8;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  border-left: 5px solid #128C7E;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  border-left: 5px solid #128c7e;
 }
 
 .room-avatar {
   width: 40px;
   height: 40px;
-  background-color: #128C7E;
+  background-color: #128c7e;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -137,13 +137,14 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px 20px 80px 20px;
-  background-image: url('@/background.png');
+  background-image: url("@/background.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   height: calc(100vh - 60px);
   max-height: calc(100vh - 60px);
   position: relative;
+  padding-bottom: 90px;
 }
 
 .message {
@@ -153,8 +154,8 @@
   border-radius: 10px;
   width: fit-content;
   min-width: 100px;
-  word-wrap: break-word; 
-  white-space: pre-wrap; 
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .message.sent {
@@ -165,7 +166,7 @@
 
 .message.received {
   margin-right: auto;
-  margin-left: 10px; 
+  margin-left: 10px;
   background-color: white;
 }
 
@@ -183,16 +184,16 @@
 
 .floating-whatsapp {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
-  background-color: #25D366;
+  bottom: 20px;
+  right: 20px;
+  background-color: #25d366;
   color: white;
   border: none;
   padding: 12px 24px;
   border-radius: 25px;
   cursor: pointer;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
   z-index: 1000;
   display: flex;
@@ -201,9 +202,9 @@
 }
 
 .floating-whatsapp:hover {
-  background-color: #128C7E;
+  background-color: #128c7e;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .delete-button {
@@ -212,7 +213,7 @@
   top: 50%;
   transform: translateY(-50%);
   padding: 8px 16px;
-  background-color: #128C7E;
+  background-color: #128c7e;
   color: white;
   border: none;
   border-radius: 5px;
@@ -233,7 +234,7 @@
   top: 50%;
   transform: translateY(-50%);
   padding: 8px 16px;
-  background-color: #128C7E;
+  background-color: #128c7e;
   color: white;
   border: none;
   border-radius: 5px;
@@ -302,7 +303,8 @@
   margin-top: 20px;
 }
 
-.save-btn, .cancel-btn {
+.save-btn,
+.cancel-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
@@ -311,7 +313,7 @@
 }
 
 .save-btn {
-  background-color: #128C7E;
+  background-color: #128c7e;
   color: white;
 }
 
@@ -363,4 +365,57 @@
 
 .logo-button:hover .logo-text {
   text-shadow: 0 0 10px #37d5c3;
+}
+
+.message-input-container {
+  display: flex;
+  padding: 15px;
+  background-color: #f0f2f5;
+  border-top: 1px solid #e0e0e0;
+  position: relative;
+  z-index: 10;
+}
+
+/* .message-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  font-size: 15px;
+  margin-right: 10px;
+  transition: border 0.3s ease;
+} */
+
+.message-input {
+  flex: 0.875;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  font-size: 15px;
+  margin-right: 10px;
+  transition: border 0.3s ease;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #128c7e;
+}
+
+.send-button {
+  background-color: #128c7e;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.send-button:hover {
+  background-color: #0d6d5d;
+  transform: scale(1.05);
 }
