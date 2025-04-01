@@ -115,6 +115,7 @@
 import axios from "axios";
 import { reactive } from "vue";
 import "@/assets/styles/chat.css";
+import socketService from "@/services/socketService";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
@@ -134,7 +135,7 @@ export default {
       searchQuery: "",
       rooms: [],
       messages: reactive({}),
-      newMessage: "", // 新增：用於存儲用戶輸入的消息
+      newMessage: "",
       showEditModal: false,
       editInfo: {
         USER_ID: "",
@@ -149,6 +150,7 @@ export default {
         ROLE: "",
         STATUS: "",
       },
+      socketConnected: false,
     };
   },
   computed: {
@@ -185,8 +187,15 @@ export default {
   methods: {
     // load message when clicking the room
     async selectRoom(roomId) {
+      if (this.currentRoom && this.socketConnected) {
+        socketService.leaveRoom(this.currentRoom);
+      }
       this.currentRoom = roomId;
       await this.fetchMessages(roomId);
+
+      if (this.socketConnected) {
+        socketService.joinRoom(roomId);
+      }
 
       this.$nextTick(() => {
         const container = this.$refs.messageContainer;
@@ -199,6 +208,56 @@ export default {
       const currentRoom = this.rooms.find((room) => room.roomId === this.currentRoom);
       const phoneNumber = currentRoom ? currentRoom.roomId : "";
       window.open(`https://wa.me/${phoneNumber}`, "_blank");
+    },
+
+    setupSocketConnection() {
+      try {
+        // 連接 Socket.IO
+        // eslint-disable-next-line no-unused-vars
+        const socket = socketService.connect();
+        this.socketConnected = true;
+
+        // 監聽新消息
+        socketService.onNewMessage((data) => {
+          console.log("收到新消息:", data);
+          if (data.roomId === this.currentRoom) {
+            if (!this.messages[this.currentRoom]) {
+              this.messages[this.currentRoom] = [];
+            }
+
+            // 添加新消息
+            this.messages[this.currentRoom].push(data.message);
+
+            // 自動滾動到底部
+            this.$nextTick(() => {
+              const container = this.$refs.messageContainer;
+              if (container) {
+                container.scrollTop = container.scrollHeight;
+              }
+            });
+          }
+        });
+        socketService.onMessageNotification((data) => {
+          console.log("收到消息通知:", data);
+
+          const roomIndex = this.rooms.findIndex((room) => room.roomId === data.roomId);
+          if (roomIndex !== -1) {
+            this.rooms[roomIndex].lastMessage = data.lastMessage;
+
+            const room = this.rooms.splice(roomIndex, 1)[0];
+            this.rooms.unshift(room);
+          } else {
+            this.fetchRealChatRooms();
+          }
+        });
+
+        if (this.currentRoom) {
+          socketService.joinRoom(this.currentRoom);
+        }
+      } catch (error) {
+        console.error("Socket.IO 連接錯誤:", error);
+        this.socketConnected = false;
+      }
     },
 
     async fetchAllUsers() {
@@ -426,9 +485,13 @@ export default {
   },
 
   async created() {
-    // 只獲取所有用戶資料，然後獲取真實聊天記錄
     await this.fetchAllUsers();
     await this.fetchRealChatRooms();
+    this.setupSocketConnection();
+  },
+
+  beforeUnmount() {
+    socketService.disconnect();
   },
 };
 </script>
