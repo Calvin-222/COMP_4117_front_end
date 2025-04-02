@@ -46,14 +46,61 @@
       </div>
     </div>
 
+    <div v-if="showNewModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>新增用戶信息</h2>
+        <div class="form-group">
+          <label>Case Code</label>
+          <input v-model="newInfo.CASE_CODE" type="text" />
+        </div>
+        <div class="form-group">
+          <label>電話號碼</label>
+          <input v-model="newInfo.PHONE_NO" type="tel" />
+        </div>
+        <div class="form-group">
+          <label>名稱</label>
+          <input v-model="newInfo.USERNAME" type="text" />
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input v-model="newInfo.FIRST_NAME" type="text" />
+        </div>
+        <div class="form-group">
+          <label>姓氏</label>
+          <input v-model="newInfo.LAST_NAME" type="text" />
+        </div>
+        <div class="form-group">
+          <label>暱稱</label>
+          <input v-model="newInfo.UPDATED_FULL_NAME" type="text" />
+        </div>
+        <div class="form-group">
+          <label>狀態</label>
+          <select v-model="newInfo.STATUS">
+            <option value=""></option>
+            <option value="訂閱中">訂閱中</option>
+            <option value="取消訂閱">未訂閱</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>住址</label>
+          <input v-model="newInfo.ADDRESS" type="text" />
+        </div>
+        <div class="modal-buttons">
+          <button @click="saveNewUser" class="save-btn">新增用戶</button>
+          <button @click="showNewModal = false" class="cancel-btn">取消</button>
+        </div>
+      </div>
+    </div>
+
     <div class="chat-header">
       <button class="logo-button" @click="goToAESC">
         <span class="logo-text">Asian Energy Studies Centre</span>
       </button>
       <div class="header-room-title">{{ currentRoomName }}</div>
+      <button class="new-button" @click="handleNew">新增用戶</button>
       <button class="edit-button" @click="handleEdit">更改信息</button>
       <button class="delete-button" @click="handleDelete">刪除聊天室</button>
-      <button class="pending-button" @click="goToPending">Pending</button>
+      <button class="pending-button" @click="goToPending">審查</button>
     </div>
 
     <div class="chat-sidebar">
@@ -73,7 +120,6 @@
             <div class="room-name">{{ room.roomName }}</div>
             <div class="last-message">{{ room.lastMessage.content }}</div>
           </div>
-          <div class="room-time">{{ room.lastMessage.timestamp }}</div>
         </div>
       </div>
     </div>
@@ -147,6 +193,17 @@ export default {
         TITLE: "",
         ADDRESS: "",
         ROLE: "",
+        STATUS: "",
+      },
+      showNewModal: false,
+      newInfo: {
+        PHONE_NO: "",
+        CASE_CODE: "",
+        FIRST_NAME: "",
+        LAST_NAME: "",
+        USERNAME: "",
+        UPDATED_FULL_NAME: "",
+        ADDRESS: "",
         STATUS: "",
       },
       socketConnected: false,
@@ -360,12 +417,50 @@ export default {
       }
     },
 
-    // 新增：發送消息方法
+    handleNew() {
+      this.newInfo = {
+        PHONE_NO: "",
+        CASE_CODE: "",
+        FIRST_NAME: "",
+        LAST_NAME: "",
+        USERNAME: "",
+        UPDATED_FULL_NAME: "",
+        ADDRESS: "",
+        STATUS: "",
+      };
+      this.showNewModal = true;
+    },
+
+    async saveNewUser() {
+      try {
+        if (!this.newInfo.PHONE_NO) {
+          alert("缺少為必填項");
+          return;
+        }
+
+        const response = await api.post("/api/users/create", this.newInfo);
+        if (response.data.success) {
+          this.showNewModal = false;
+          alert("用戶資料已新增");
+          await this.fetchAllUsers();
+
+          if (this.newInfo.PHONE_NO) {
+            await this.selectRoom(this.newInfo.PHONE_NO);
+          }
+        } else {
+          alert("saveNewUser: " + response.data.message);
+        }
+      } catch (error) {
+        console.error("saveNewUser:", error);
+        alert("saveNewUser: " + (error.response?.data?.message || error.message));
+      }
+    },
+
+
     async sendMessage() {
       if (!this.newMessage.trim() || !this.currentRoom) return;
 
       try {
-        // 獲取當前聊天室資訊
         const currentRoomData = this.rooms.find((room) => room.roomId === this.currentRoom);
         if (!currentRoomData) {
           alert("找不到當前聊天室資訊");
@@ -452,23 +547,5 @@ export default {
 </script>
 
 <style>
-/* Add styles for the pending button */
-.pending-button {
-  position: absolute;
-  right: 260px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 8px 16px;
-  background-color: #128c7e;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
 
-.pending-button:hover {
-  background-color: #f3c370;
-}
 </style>
